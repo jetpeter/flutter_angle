@@ -392,7 +392,7 @@ class RenderingContext {
   }
 
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
   /// here in [nativeType]
   void bufferData(int target, dynamic data, int? usage) {
     startCheck('bufferData');
@@ -406,7 +406,7 @@ class RenderingContext {
   }
 
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
   /// here in [nativeType]
   void bufferDataVoid(int target, int data, int? usage) {
     final offSetPointer = Pointer<Void>.fromAddress(data);
@@ -415,7 +415,7 @@ class RenderingContext {
   }
 
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
   /// here in [nativeType]
   void bufferDataTyped(int target, TypedData data, int? usage) {
     startCheck('bufferData');

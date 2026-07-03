@@ -470,7 +470,7 @@ class RenderingContext{
   //   checkError('bufferData');
   // }
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
   /// here in [nativeType]
   void bufferData(int target, dynamic data, int? usage) {
     startCheck("bufferData");

@@ -604,7 +604,9 @@ class FlutterAngle {
 
   void dispose([List<FlutterAngleTexture?>? textures]) {
     textures?.forEach((t) {
-      if(t!=null)deleteTexture(t);
+      if(t!=null){
+        deleteTexture(t);
+      }
       t = null;
     });
     textures?.clear();
@@ -633,8 +635,12 @@ class FlutterAngle {
       return;
     }
 
-    if (!_isRBO) gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D, texture.rboId, 0);
-    else gl.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, texture.rboId);
+    if (!_isRBO){
+      gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D, texture.rboId, 0);
+    }
+    else{
+      gl.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, texture.rboId);
+    }
     _activeFramebuffer = texture.fboId;
   }
 

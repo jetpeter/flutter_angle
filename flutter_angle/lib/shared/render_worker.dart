@@ -64,8 +64,8 @@ class RenderWorker{
     
     final program = GlProgram(
       _gl,
-      fragment_shader, 
-      vertex_shader
+      fragmentShader, 
+      vertexShader
     ).program;
 
     _gl.useProgram(program);
@@ -123,7 +123,7 @@ class RenderWorker{
     _gl.deleteBuffer(vertexBuffer4FBO);
   }
 
-  final vertex_shader = """
+  final vertexShader = """
   #version 300 es
   precision mediump float;
 
@@ -140,7 +140,7 @@ class RenderWorker{
 
   """;
       
-  final fragment_shader = """
+  final fragmentShader = """
   #version 300 es
   precision mediump float;
 
@@ -156,7 +156,7 @@ class RenderWorker{
   """;
 
   //#version 300 es must be at first line
-  final vertex_shader_android = """
+  final vertexShaderAndroid = """
   #version 300 es
   precision mediump float;
 
@@ -172,7 +172,7 @@ class RenderWorker{
   """;
 
 
-  final oes_vertex_shader = """
+  final oesVertexShader = """
   #version 300 es
   precision mediump float;
 
@@ -186,7 +186,7 @@ class RenderWorker{
   }
   """;
 
-  final oes_fragment_shader  = """
+  final oesFragmentShader  = """
   #version 300 es
   #extension GL_OES_EGL_image_external_essl3 : enable
 
@@ -203,7 +203,7 @@ class RenderWorker{
   """;
 
 
-  final fxaa_vertex_shader = """
+  final fxaaVertexShader = """
   #version 300 es
   layout (location = 0) in vec4 Position;
   layout (location = 1) in vec2 TextureCoords;
@@ -215,7 +215,7 @@ class RenderWorker{
   }
   """;
 
-  final fxaa_fragment_shader = """
+  final fxaaFragmentShader = """
   #version 300 es
   precision mediump float;
   uniform sampler2D Texture0;

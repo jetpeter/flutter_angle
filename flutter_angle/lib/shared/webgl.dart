@@ -22,7 +22,7 @@ abstract class WebGL {
     }
   }
 
-  operator [](int? i) => (){
+  Function operator [](int? i) => (){
     if(webGL.contains(i)){
       return i;
     }

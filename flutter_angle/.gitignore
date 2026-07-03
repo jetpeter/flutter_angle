@@ -23,6 +23,10 @@
 .vscode/*
 .metadata
 
+pana_report.json
+report.json
+raw_pana.json
+
 */macos
 */web
 */ios
