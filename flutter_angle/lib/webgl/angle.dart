@@ -97,6 +97,9 @@ class FlutterAngle{
     ..width = width
     ..height = height
     ..id = id;
+    if (options.webRightClickOverride) {
+      element.oncontextmenu = ((html.MessageEvent e) => e.preventDefault()).toJS;
+    }
 
     ui.platformViewRegistry.registerViewFactory(_divId.toString(), (int viewId) {
       return element;

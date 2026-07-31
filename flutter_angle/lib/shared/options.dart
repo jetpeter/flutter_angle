@@ -6,6 +6,7 @@ class AngleOptions {
   final bool alpha;
   final bool customRenderer;
   final bool useSurfaceProducer;
+  final bool webRightClickOverride;
 
   const AngleOptions({
     required this.width,
@@ -15,5 +16,6 @@ class AngleOptions {
     this.antialias = false,
     this.customRenderer = true,
     this.useSurfaceProducer = false,
+    this.webRightClickOverride = false,
   });
 }
