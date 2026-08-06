@@ -1,3 +1,7 @@
+## 0.4.2
+
+* Fixed ANGLE android memory allocation.
+
 ## 0.4.1
 
 * Updated ffigen and bindings.

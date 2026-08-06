@@ -2,22 +2,23 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_angle/shared/console.dart';
 
+import 'gles_bindings.dart';
 import 'dart:ffi';
 import 'dart:async';
 import 'dart:ui';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
+import 'index.dart';
 import '../../shared/webgl.dart';
 import '../../shared/classes.dart';
-import './gles_bindings.dart' as gl;
 
 class RenderingContext {
-  //final LibOpenGLES gl;
+  final LibOpenGLES gl;
   final int width;
   final int height;
   final bool checkGlErrorOnEveryCall;
 
-  RenderingContext.create(this.width, this.height, [this.checkGlErrorOnEveryCall = false]);
+  RenderingContext.create(this.gl, this.width, this.height, [this.checkGlErrorOnEveryCall = false]);
 
   /// As allocating and freeing native memory is expensive and we need regularly
   /// buffers to receive values from FFI function we create a small set here that will
@@ -44,7 +45,7 @@ class RenderingContext {
 
   int getUniformBlockIndex(Program program, String uniformBlockName){
     var sourceString = uniformBlockName.toNativeUtf8();
-    var arrayPointer = Pointer<Char>.fromAddress(sourceString.address);
+    var arrayPointer = Pointer<Int8>.fromAddress(sourceString.address);
     int i = gl.glGetUniformBlockIndex(program.id, arrayPointer);
     calloc.free(arrayPointer);
     calloc.free(sourceString);
@@ -143,7 +144,7 @@ class RenderingContext {
     var length = calloc<Int32>();
     var size = calloc<Int32>();
     var type = calloc<Uint32>();
-    var name = calloc<Char>(maxLen);
+    var name = calloc<Int8>(maxLen);
 
     gl.glGetTransformFeedbackVarying(program.id, index, maxLen - 1, length, size, type, name);
     checkError('getTransformFeedbackVarying');
@@ -225,10 +226,10 @@ class RenderingContext {
 
   void transformFeedbackVaryings(Program program, int count, List<String> varyings, int bufferMode) {
     startCheck('transformFeedbackVaryings');
-    final varyingsPtr = calloc<Pointer<Char>>(varyings.length);
+    final varyingsPtr = calloc<Pointer<Int8>>(varyings.length);
     int i = 0;
     for(final varying in varyings) {
-      varyingsPtr[i] = varying.toNativeUtf8().cast<Char>();
+      varyingsPtr[i] = varying.toNativeUtf8().cast<Int8>();
       i = i + 1;
     }
     gl.glTransformFeedbackVaryings(program.id, count, varyingsPtr, bufferMode);
@@ -329,7 +330,7 @@ class RenderingContext {
 
   void clearBufferiv(int buffer,int drawbuffer, int value){
     startCheck('clearBufferiv');
-    Pointer<Int> id = calloc<Int>(value);
+    Pointer<Int32> id = calloc<Int32>(value);
     gl.glClearBufferiv(buffer,drawbuffer,id);
     checkError('clearBufferiv');
     calloc.free(id);
@@ -392,7 +393,7 @@ class RenderingContext {
   }
 
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
   /// here in [nativeType]
   void bufferData(int target, dynamic data, int? usage) {
     startCheck('bufferData');
@@ -406,7 +407,7 @@ class RenderingContext {
   }
 
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
   /// here in [nativeType]
   void bufferDataVoid(int target, int data, int? usage) {
     final offSetPointer = Pointer<Void>.fromAddress(data);
@@ -415,7 +416,7 @@ class RenderingContext {
   }
 
   /// Be careful which type of integer you really pass here. Unfortunately an UInt16List
-  /// is viewed by the Dart type system just as List of int, so we jave to specify the native type
+  /// is viewed by the Dart type system just as List<int>, so we jave to specify the native type
   /// here in [nativeType]
   void bufferDataTyped(int target, TypedData data, int? usage) {
     startCheck('bufferData');
@@ -456,21 +457,21 @@ class RenderingContext {
   }
 
   // Pre-allocate these once at the class or global level to avoid GC pressure/malloc overhead
-  final _intBuffer = calloc<Int>();
+  final _intBuffer = calloc<Int32>();
   void compileShader(WebGLShader shader, [bool checkForErrors = true]) {
     startCheck('compileShader');
     gl.glCompileShader(shader.id);
 
     if (checkForErrors) {
-      gl.glGetShaderiv(shader.id, gl.GL_COMPILE_STATUS, _intBuffer);
+      gl.glGetShaderiv(shader.id, GL_COMPILE_STATUS, _intBuffer);
       
-      if (_intBuffer.value == gl.GL_FALSE) {
-        gl.glGetShaderiv(shader.id, gl.GL_INFO_LOG_LENGTH, _intBuffer);
+      if (_intBuffer.value == GL_FALSE) {
+        gl.glGetShaderiv(shader.id, GL_INFO_LOG_LENGTH, _intBuffer);
         final int logLen = _intBuffer.value;
 
         String message = "Shader compilation failed.";
         if (logLen > 0) {
-          final infoLog = calloc<Char>(logLen);
+          final infoLog = calloc<Int8>(logLen);
           gl.glGetShaderInfoLog(shader.id, logLen, nullptr, infoLog);
           message = infoLog.cast<Utf8>().toDartString();
 
@@ -586,7 +587,7 @@ class RenderingContext {
     ];
 
     if (_intValues.indexOf(key) >= 0) {
-      final v = calloc<Int>(4);
+      final v = calloc<Int32>(4);
       gl.glGetIntegerv(key, v);
       int _v = v.value;
       calloc.free(v);
@@ -730,9 +731,9 @@ class RenderingContext {
   ActiveInfo getActiveAttrib(Program v0, int v1) {
     startCheck('getActiveAttrib');
     var length = calloc<Int32>();
-    var size = calloc<Int>();
+    var size = calloc<Int32>();
     var type = calloc<Uint32>();
-    var name = calloc<Char>(100);
+    var name = calloc<Int8>(100);
 
     gl.glGetActiveAttrib(v0.id, v1, 99, length, size, type, name);
     checkError('getActiveAttrib');
@@ -753,9 +754,9 @@ class RenderingContext {
   ActiveInfo getActiveUniform(Program v0, int v1) {
     startCheck('getActiveUniform');
     var length = calloc<Int32>();
-    var size = calloc<Int>();
+    var size = calloc<Int32>();
     var type = calloc<Uint32>();
-    var name = calloc<Char>(100);
+    var name = calloc<Int8>(100);
 
     gl.glGetActiveUniform(v0.id, v1, 99, length, size, type, name);
     checkError('getActiveUniform');
@@ -797,7 +798,7 @@ class RenderingContext {
     if (Platform.isMacOS) {
       return getExtensionMacos(key);
     }
-    Pointer<UnsignedChar> _v = gl.glGetString(WebGL.EXTENSIONS);
+    Pointer<Uint8> _v = gl.glGetString(WebGL.EXTENSIONS);
     checkError('getExtension');
     String _vstr = _v == nullptr?'unnamed':_v.cast<Utf8>().toDartString();
     List<String> _extensions = _vstr.split(" ");
@@ -810,7 +811,7 @@ class RenderingContext {
     List<String> _extensions = [];
     var nExtension = getIntegerv(33309);
     for (int i = 0; i < nExtension; i++) {
-      _extensions.add(getStringi(gl.GL_EXTENSIONS, i));
+      _extensions.add(getStringi(GL_EXTENSIONS, i));
     }
 
     return _extensions;
@@ -818,7 +819,7 @@ class RenderingContext {
 
   String getStringi(int key, int index) {
     startCheck('getStringi');
-    Pointer<UnsignedChar> _v = gl.glGetStringi(key, index);
+    Pointer<Uint8> _v = gl.glGetStringi(key, index);
     checkError('getStringi');
     String str = _v == nullptr?'unnamed':_v.cast<Utf8>().toDartString();
     //calloc.free(_v);
@@ -827,7 +828,7 @@ class RenderingContext {
 
   int getIntegerv(int v0) {
     startCheck('getIntegerv');
-    Pointer<Int> ptr = calloc<Int>();
+    Pointer<Int32> ptr = calloc<Int32>();
     gl.glGetIntegerv(v0, ptr);
     checkError('getIntegerv');
     int _v = ptr.value;
@@ -838,7 +839,7 @@ class RenderingContext {
 
   String? getProgramInfoLog(Program program){
     startCheck('getProgramInfoLog');
-    var infoLen = calloc<Int>();
+    var infoLen = calloc<Int32>();
 
     gl.glGetProgramiv(program.id, 35716, infoLen);
 
@@ -848,7 +849,7 @@ class RenderingContext {
     String message = '';
 
     if (_len > 0) {
-      final infoLog = calloc<Char>(_len);
+      final infoLog = calloc<Int8>(_len);
       gl.glGetProgramInfoLog(program.id, _len, nullptr, infoLog);
       checkError('getProgramInfoLog');
       message = "\nError compiling shader:\n${infoLog.cast<Utf8>()}";
@@ -861,7 +862,7 @@ class RenderingContext {
 
   WebGLParameter getProgramParameter(Program program, int pname) {
     startCheck('getProgramParameter');
-    final status = calloc<Int>();
+    final status = calloc<Int32>();
     gl.glGetProgramiv(program.id, pname, status);
     final _v = status.value;
     calloc.free(status);
@@ -872,7 +873,7 @@ class RenderingContext {
 
   String? getShaderInfoLog(WebGLShader shader){
     startCheck('getShaderInfoLog');
-    final infoLen = calloc<Int>();
+    final infoLen = calloc<Int32>();
     gl.glGetShaderiv(shader.id, 35716, infoLen);
 
     int _len = infoLen.value;
@@ -880,7 +881,7 @@ class RenderingContext {
 
     String message = '';
     if (_len > 1) {
-      final infoLog = calloc<Char>(_len);
+      final infoLog = calloc<Int8>(_len);
 
       gl.glGetShaderInfoLog(shader.id, _len, nullptr, infoLog);
       checkError('getShaderInfoLog');
@@ -893,7 +894,7 @@ class RenderingContext {
 
   bool getShaderParameter(WebGLShader shader, int pname){
     startCheck('getShaderParameter');
-    var _pointer = calloc<Int>();
+    var _pointer = calloc<Int32>();
     gl.glGetShaderiv(shader.id, pname, _pointer);
     checkError('getShaderParameter');
     final _v = _pointer.value;
@@ -948,16 +949,16 @@ class RenderingContext {
     startCheck('linkProgram');
     gl.glLinkProgram(program.id);
     if (checkForErrors) {
-      final linked = calloc<Int>();
-      gl.glGetProgramiv(program.id, gl.GL_LINK_STATUS, linked);
+      final linked = calloc<Int32>();
+      gl.glGetProgramiv(program.id, GL_LINK_STATUS, linked);
       if (linked.value == 0) {
-        final infoLen = calloc<Int>();
+        final infoLen = calloc<Int32>();
 
-        gl.glGetProgramiv(program.id, gl.GL_INFO_LOG_LENGTH, infoLen);
+        gl.glGetProgramiv(program.id, GL_INFO_LOG_LENGTH, infoLen);
 
         String message = '';
         if (infoLen.value > 1) {
-          final infoLog = calloc<Char>(infoLen.value);
+          final infoLog = calloc<Int8>(infoLen.value);
 
           gl.glGetProgramInfoLog(program.id, infoLen.value, nullptr, infoLog);
           message = "\nError linking program:\n${infoLog.cast<Utf8>()}";
@@ -998,7 +999,7 @@ class RenderingContext {
   void shaderSource(WebGLShader shader, String shaderSource) {
     startCheck('shaderSource');
     var sourceString = shaderSource.toNativeUtf8();
-    var arrayPointer = calloc<Pointer<Char>>();
+    var arrayPointer = calloc<Pointer<Int8>>();
     arrayPointer.value = Pointer.fromAddress(sourceString.address);
     gl.glShaderSource(shader.id, 1, arrayPointer, nullptr);
     calloc.free(arrayPointer);
@@ -1299,9 +1300,9 @@ class RenderingContext {
   }
 
   set drawingBufferColorSpace(String cspace) => {
-    gl.glEnable(gl.GL_FRAMEBUFFER_SRGB_EXT)
+    gl.glEnable(GL_FRAMEBUFFER_SRGB_EXT)
   };
   set unpackColorSpace(String cspace) => {
-    gl.glEnable(gl.GL_FRAMEBUFFER_SRGB_EXT)
+    gl.glEnable(GL_FRAMEBUFFER_SRGB_EXT)
   };
 }

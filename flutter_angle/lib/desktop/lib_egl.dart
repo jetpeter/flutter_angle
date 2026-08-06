@@ -4,17 +4,14 @@ import 'dart:io';
 import 'package:dylib/dylib.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_angle/shared/console.dart';
-import '../src/desktop/egl_bindings.dart' as egl;
-import '../src/desktop/angle_bindings.dart';
+import './index.dart';
 
 class EGL {
-  static bool _useAngle = false;
   EGL({bool useAngle = true}) {
-    _useAngle = useAngle;
-    loadEGL(useAngle: _useAngle);
+    loadEGL(useAngle: useAngle);
   }
 
-  static DynamicLibrary? _libEGL;
+  static LibEGL? _libEGL;
   //
   // Public APIs
   //
@@ -24,18 +21,15 @@ class EGL {
   }
 
   static EglError eglGetError() {
-    loadEGL(useAngle: _useAngle);
-    return egl.eglGetError().toEglError();
+    return _libEGL!.eglGetError().toEglError();
   }
 
   Pointer<Void> eglGetCurrentContext() {
-    loadEGL(useAngle: _useAngle);
-    return egl.eglGetCurrentContext();
+    return _libEGL!.eglGetCurrentContext();
   }
 
-  Pointer<Void> eglGetDisplay([int? displayId]) {
-    loadEGL(useAngle: _useAngle);
-    final nativeCallResult = egl.eglGetDisplay(displayId ?? 0);
+  Pointer<Void> eglGetDisplay([Pointer<Void>? displayId]) {
+    final nativeCallResult = _libEGL!.eglGetDisplay(displayId ?? nullptr);
 
     if (nativeCallResult == nullptr) {
       throw EglException(
@@ -46,42 +40,38 @@ class EGL {
   }
 
   int eglBindTexImage(Pointer<Void> dpy, Pointer<Void> surface, int buffer) {
-    loadEGL(useAngle: _useAngle);
-    return egl.eglBindTexImage(dpy, surface, buffer);
+    return _libEGL!.eglBindTexImage(dpy, surface, buffer);
   }
 
   int eglTerminate(Pointer<Void> dpy) {
-    loadEGL(useAngle: _useAngle);
-    return egl.eglTerminate(dpy);
+    return _libEGL!.eglTerminate(dpy);
   }
 
   int eglDestroySurface(Pointer<Void> dpy, Pointer<Void> surface) {
-    loadEGL(useAngle: _useAngle);
-    return egl.eglDestroySurface(dpy, surface);
+    return _libEGL!.eglDestroySurface(dpy, surface);
   }
 
   static void loadEGL({bool useAngle = false}) {
     if (_libEGL == null) {
       if (Platform.isWindows) {
-        _libEGL = DynamicLibrary.open(resolveDylibPath('libEGL'));
+        _libEGL = LibEGL(DynamicLibrary.open(resolveDylibPath('libEGL')));
       } else if (Platform.isAndroid) {
         if (useAngle) {
-          _libEGL = DynamicLibrary.open('libEGL_angle.so');
+          _libEGL = LibEGL(DynamicLibrary.open('libEGL_angle.so'));
         } else {
-          _libEGL = DynamicLibrary.open('libEGL.so');
+          _libEGL = LibEGL(DynamicLibrary.open('libEGL.so'));
         }
       } else {
-        _libEGL = DynamicLibrary.process();
+        _libEGL = LibEGL(DynamicLibrary.process());
       }
     }
   }
 
   EglInitializeResult eglInitialize(Pointer<Void> display) {
-    loadEGL(useAngle: _useAngle);
     final major = calloc<Int32>();
     final minor = calloc<Int32>();
     final nativeCallSucceeded =
-        egl.eglInitialize(display, major, minor) == 1;
+        _libEGL!.eglInitialize(display, major, minor) == 1;
     EglInitializeResult result;
 
     if (nativeCallSucceeded) {
@@ -105,7 +95,6 @@ class EGL {
     Map<EglConfigAttribute, int>? attributes,
     int maxConfigs = 1,
   }) {
-    loadEGL(useAngle: _useAngle);
     final attributeCount = attributes == null ? 1 : attributes.length * 2 + 1;
     final attributeList = calloc<Int32>(attributeCount);
 
@@ -123,7 +112,7 @@ class EGL {
 
     final configs = calloc<IntPtr>(maxConfigs);
     final numConfigs = calloc<Int32>();
-    final nativeCallSucceeded = egl.eglChooseConfig(
+    final nativeCallSucceeded = _libEGL!.eglChooseConfig(
           display,
           attributeList,
           configs.cast<Pointer<Void>>(),
@@ -153,10 +142,9 @@ class EGL {
 
   List<Pointer<Void>> eglGetConfigs(Pointer<Void> display,
       {int maxConfigs = 10}) {
-    loadEGL(useAngle: _useAngle);
     final configs = calloc<IntPtr>(maxConfigs);
     final numConfigs = calloc<Int32>();
-    final nativeCallSucceeded = egl.eglGetConfigs(
+    final nativeCallSucceeded = _libEGL!.eglGetConfigs(
           display,
           configs.cast<Pointer<Void>>(),
           maxConfigs,
@@ -184,9 +172,8 @@ class EGL {
 
   int eglGetConfigAttrib(Pointer<Void> display, Pointer<Void> config,
       EglConfigAttribute attribute) {
-    loadEGL(useAngle: _useAngle);
     final value = calloc<Int32>();
-    final nativeCallSucceeded = egl.eglGetConfigAttrib(
+    final nativeCallSucceeded = _libEGL!.eglGetConfigAttrib(
           display,
           config,
           attribute.toIntValue(),
@@ -284,7 +271,6 @@ class EGL {
     Pointer<Void>? shareContext,
     bool isDebugContext = false,
   }) {
-    loadEGL(useAngle: _useAngle);
     final attributeList = calloc<Int32>(5);
     attributeList[0] = EGL_CONTEXT_CLIENT_VERSION;
     attributeList[1] = contextClientVersion;
@@ -296,7 +282,7 @@ class EGL {
       attributeList[4] = EglValue.none.toIntValue();
     }
 
-    final nativeCallResult = egl.eglCreateContext(
+    final nativeCallResult = _libEGL!.eglCreateContext(
         display, config, shareContext ?? nullptr, attributeList);
     late Pointer<Void> result;
 
@@ -319,9 +305,8 @@ class EGL {
     Pointer<Void> config,
     Pointer<Void> nativeWindow,
   ) {
-    loadEGL(useAngle: _useAngle);
     final nativeCallResult =
-        egl.eglCreateWindowSurface(display, config, nativeWindow, nullptr);
+        _libEGL!.eglCreateWindowSurface(display, config, nativeWindow, nullptr);
 
     if (nativeCallResult == nullptr) {
       throw EglException(
@@ -336,7 +321,6 @@ class EGL {
     Pointer<Void> config, {
     Map<EglSurfaceAttributes, int>? attributes,
   }) {
-    loadEGL(useAngle: _useAngle);
     final attributeCount = attributes == null ? 1 : attributes.length * 2 + 1;
     final attributeList = calloc<Int32>(attributeCount);
 
@@ -353,7 +337,7 @@ class EGL {
     attributeList[attributeCount - 1] = EglValue.none.toIntValue();
 
     final nativeCallResult =
-        egl.eglCreatePbufferSurface(display, config, attributeList);
+        _libEGL!.eglCreatePbufferSurface(display, config, attributeList);
 
     calloc.free(attributeList);
     if (nativeCallResult == nullptr) {
@@ -372,13 +356,12 @@ class EGL {
     Pointer<Void> config,
     Pointer<Int32> attribList,
   ) {
-    loadEGL(useAngle: _useAngle);
     // Using direct access to _libEGL to call eglCreatePbufferFromClientBuffer
-    final nativeCallResult = egl.eglCreatePbufferFromClientBuffer(
+    final nativeCallResult = _libEGL!.eglCreatePbufferFromClientBuffer(
         display, bufferType, buffer, config, attribList);
 
     if (nativeCallResult == nullptr) {
-      final error = egl.eglGetError();
+      final error = _libEGL!.eglGetError();
       throw EglException(
           'Failed to create PBuffer from client buffer for display [$display], buffer type [$bufferType], buffer [$buffer], config [$config]. EGL error: $error');
     }
@@ -386,20 +369,18 @@ class EGL {
   }
 
   void eglWaitClient() {
-    loadEGL(useAngle: _useAngle);
-    egl.eglWaitClient();
+    _libEGL!.eglWaitClient();
   }
 
-  // void makeCurrent(Pointer<Void> context) {
-  //   loadEGL(useAngle: _useAngle);
-  //   final nativeCallResult = egl.makeCurrent(context.address) == 1;
+  void makeCurrent(Pointer<Void> context) {
+    final nativeCallResult = _libEGL!.makeCurrent(context.address) == 1;
 
-  //   if (nativeCallResult) {
-  //     return;
-  //   }
+    if (nativeCallResult) {
+      return;
+    }
 
-  //   throw EglException('Failed to make current using context [$context].');
-  // }
+    throw EglException('Failed to make current using context [$context].');
+  }
 
   void eglMakeCurrent(
     Pointer<Void> display,
@@ -407,12 +388,13 @@ class EGL {
     Pointer<Void> read,
     Pointer<Void> context,
   ) {
-    loadEGL(useAngle: _useAngle);
     // Check for invalid small pointer values (like 0x1 or 0x2) which are not valid EGL surfaces
     // These may be returned by some EGL implementations on macOS
     bool isInvalidSurface(Pointer<Void> ptr) {
       final address = ptr.address;
-      return address > 0 && address < 1000; // Arbitrary cutoff for "suspiciously small" pointer values
+      return address > 0 &&
+          address <
+              1000; // Arbitrary cutoff for "suspiciously small" pointer values
     }
 
     if (isInvalidSurface(draw) || isInvalidSurface(read)) {
@@ -431,7 +413,8 @@ class EGL {
                 attributes: attributes);
 
             // Now make current with the new surface instead of the invalid ones
-            final nativeCallResult = egl.eglMakeCurrent(display, newSurface, newSurface, context) ==
+            final nativeCallResult = _libEGL!
+                    .eglMakeCurrent(display, newSurface, newSurface, context) ==
                 1;
             if (nativeCallResult) {
               return;
@@ -447,21 +430,21 @@ class EGL {
 
     // Original implementation
     final nativeCallResult =
-        egl.eglMakeCurrent(display, draw, read, context) == 1;
+        _libEGL!.eglMakeCurrent(display, draw, read, context) == 1;
 
     if (nativeCallResult) {
       return;
     }
 
-    throw EglException('Failed to make current using display [$display], draw [$draw], read [$read], context [$context].');
+    throw EglException(
+        'Failed to make current using display [$display], draw [$draw], read [$read], context [$context].');
   }
 
   void eglSwapBuffers(
     Pointer<Void> display,
     Pointer<Void> surface,
   ) {
-    loadEGL(useAngle: _useAngle);
-    final nativeCallResult = egl.eglSwapBuffers(display, surface) == 1;
+    final nativeCallResult = _libEGL!.eglSwapBuffers(display, surface) == 1;
 
     if (nativeCallResult) {
       return;
@@ -475,8 +458,7 @@ class EGL {
     Pointer<Void> display,
     Pointer<Void> context,
   ) {
-    loadEGL(useAngle: _useAngle);
-    final nativeCallResult = egl.eglDestroyContext(display, context) == 1;
+    final nativeCallResult = _libEGL!.eglDestroyContext(display, context) == 1;
 
     if (nativeCallResult) {
       return;
@@ -487,15 +469,14 @@ class EGL {
   }
 
   int getTextureTarget(Pointer<Void> display, Pointer<Void> config) {
-    loadEGL(useAngle: _useAngle);
     final targetPtr = calloc<Int32>(1);
     int textureTarget;
 
     try {
-      if (egl.eglGetConfigAttrib(
+      if (_libEGL!.eglGetConfigAttrib(
               display, config, EGL_BIND_TO_TEXTURE_TARGET_ANGLE, targetPtr) ==
           0) {
-        final error = egl.eglGetError();
+        final error = _libEGL!.eglGetError();
         angleConsole.info('Failed to get texture target: Error $error');
         textureTarget = EGL_TEXTURE_2D; // Fallback to 2D if query fails
       } else {

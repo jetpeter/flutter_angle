@@ -16,17 +16,11 @@ import io.flutter.plugin.common.MethodChannel.Result;
 
 import io.flutter.view.TextureRegistry;
 
-import android.graphics.SurfaceTexture;
-import android.opengl.EGL14;
 import android.opengl.EGL15;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
-import android.opengl.EGLObjectHandle;
-import android.opengl.EGLSurface;
 import android.opengl.GLES30;
-import android.os.Build;
-import android.util.Log;
 import android.view.Surface;
 
 import java.util.HashMap;
@@ -56,22 +50,36 @@ import static android.opengl.GLES20.GL_VENDOR;
 import static android.opengl.GLES20.GL_VERSION;
 import static android.opengl.GLES20.glGetError;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+
 class AngleCheck {
   public static boolean isEmulator() {
-    Log.i("FlutterAnglePlugin", "Using Android Virtual Device.");
-    return (Build.FINGERPRINT.startsWith("generic")
-      || Build.FINGERPRINT.contains("vbox")
-      || Build.FINGERPRINT.contains("sdk_gphone")
-      || Build.PRODUCT.contains("sdk")
-      || Build.PRODUCT.contains("emulator")
-      || Build.PRODUCT.contains("google_sdk")
-      || Build.HARDWARE.contains("goldfish")
-      || Build.HARDWARE.contains("ranchu")
-      || Build.MANUFACTURER.contains("Genymotion")
-      || Build.MANUFACTURER.contains("Google")
-      || Build.MODEL.contains("google_sdk")
+    return (Build.FINGERPRINT.startsWith("generic") 
+      || Build.FINGERPRINT.contains("vbox") 
+      || Build.FINGERPRINT.contains("sdk_gphone") 
+      || Build.PRODUCT.contains("sdk") 
+      || Build.PRODUCT.contains("emulator") 
+      || Build.PRODUCT.contains("google_sdk") 
+      || Build.HARDWARE.contains("goldfish") 
+      || Build.HARDWARE.contains("ranchu") 
+      || Build.MANUFACTURER.contains("Genymotion") 
+      || Build.MODEL.contains("google_sdk") 
       || Build.MODEL.contains("Emulator")
+      || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
     );
+  }
+
+  public static boolean isVulkanSupported(Context context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+      return false;
+    }
+    if (context == null) {
+      return false;
+    }
+    PackageManager pm = context.getPackageManager();
+    return pm.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL, 0) 
+        || pm.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL, 1);
   }
 
   public static boolean isVersionAllowed() {
@@ -79,15 +87,7 @@ class AngleCheck {
       Log.i("FlutterAnglePlugin", "Android version is lower than 28.");
       return false;
     }
-
     Log.i("FlutterAnglePlugin", "Android version is greater than or equal to 28.");
-    return true;
-  }
-
-  public static boolean isAllowed() {
-    if (isEmulator() || !isVersionAllowed() || isBlacklistedForAngle()) {
-      return false;
-    }
     return true;
   }
 
@@ -95,10 +95,32 @@ class AngleCheck {
     String m = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
     String b = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
     String d = Build.DEVICE != null ? Build.DEVICE.toLowerCase() : "";
-
     return m.contains("huawei") || b.contains("huawei") || b.contains("honor");
   }
+
+  public static boolean isAllowed(Context context) {
+    if (isEmulator()) {
+      Log.i("FlutterAnglePlugin", "Angle disallowed: Using Android Virtual Device / Emulator.");
+      return false;
+    }
+    if (!isVersionAllowed()) {
+      Log.i("FlutterAnglePlugin", "Angle disallowed: Android API level is less than 28.");
+      return false;
+    }
+    if (isBlacklistedForAngle()) {
+      Log.i("FlutterAnglePlugin", "Angle disallowed: Device manufacturer/brand is blacklisted.");
+      return false;
+    }
+    if (!isVulkanSupported(context)) {
+      Log.i("FlutterAnglePlugin", "Angle disallowed: Device lacks a valid hardware Vulkan driver level.");
+      return false;
+    }
+
+    Log.i("FlutterAnglePlugin", "Angle allowed: Hardware criteria fully satisfied.");
+    return true;
+  }
 }
+
 
 class OpenGLException extends Throwable {
   int error;
@@ -129,6 +151,8 @@ public class FlutterAnglePlugin implements FlutterPlugin, MethodCallHandler {
   private MethodChannel channel;
   private OpenGLManager openGLManager = null;
   private TextureRegistry textureRegistry;
+
+  private Context context; 
   
   private Map<Long, FlutterGLTexture> flutterTextureMap;
   private static final String TAG = "FlutterAnglePlugin";
@@ -151,6 +175,8 @@ public class FlutterAnglePlugin implements FlutterPlugin, MethodCallHandler {
     channel.setMethodCallHandler(this);
     textureRegistry = binding.getTextureRegistry();
     flutterTextureMap = new HashMap<>();
+
+    this.context = binding.getApplicationContext();
   }
 
   @Override
@@ -168,7 +194,7 @@ public class FlutterAnglePlugin implements FlutterPlugin, MethodCallHandler {
         break;
       // Plugin2 methods (ANGLE) – note the "Angle" suffix
       case "initOpenGLAngle":
-        if(AngleCheck.isAllowed()){
+        if(AngleCheck.isAllowed(this.context)){
           initOpenGLAngleImplementation(result);
         }
         else{
@@ -176,7 +202,7 @@ public class FlutterAnglePlugin implements FlutterPlugin, MethodCallHandler {
         }
         break;
       case "createTextureAngle":
-        if(AngleCheck.isAllowed()){
+        if(AngleCheck.isAllowed(this.context)){
           createTextureAngleImplementation(call, result);
         }
         else{
@@ -207,7 +233,7 @@ public class FlutterAnglePlugin implements FlutterPlugin, MethodCallHandler {
     response.put("context", openGLManager.getEGLContext().getNativeHandle());
     response.put("eglConfigId", openGLManager.getConfigId());
     response.put("dummySurface", dummySurface);
-    response.put("forceOpengl", !AngleCheck.isAllowed());
+    response.put("forceOpengl", !AngleCheck.isAllowed(this.context));
     result.success(response);
   }
 
@@ -288,7 +314,7 @@ public class FlutterAnglePlugin implements FlutterPlugin, MethodCallHandler {
     }
 
     Map<String, Object> response = new HashMap<>();
-    response.put("forceOpengl", !AngleCheck.isAllowed());
+    response.put("forceOpengl", !AngleCheck.isAllowed(this.context));
     result.success(response);
 
     Log.i(TAG, "ANGLE OpenGL initialized successfully");
