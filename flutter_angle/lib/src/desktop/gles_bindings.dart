@@ -5,6 +5,7 @@
 library;
 
 import 'dart:ffi' as ffi;
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
@@ -81,7 +82,7 @@ class LibOpenGLES {
   /// Holds the Dynamic library.
   final ffi.DynamicLibrary _dylib;
   bool useAngle;
-  bool get useNativeFFI => useAngle;
+  bool get useNativeFFI => useAngle && Platform.isAndroid;
 
   /// The symbols are looked up in [dynamicLibrary].
   LibOpenGLES(ffi.DynamicLibrary dynamicLibrary, [this.useAngle = true]) : _dylib = dynamicLibrary;
