@@ -272,6 +272,10 @@ function glFramebufferTexture2D(gl, target, attachment, textarget, texture, leve
   gl.framebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
+function glFramebufferTextureLayer(gl, target, attachment, texture, level, layer){
+  gl.glFramebufferTextureLayer(target, attachment, texture, level,layer);
+}
+
 function glReadPixels(gl, x, y, width, height, format, type, pixels) {
   gl.readPixels(x, y, width, height, format, type, pixels);
 }
