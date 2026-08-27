@@ -1,3 +1,9 @@
+## 0.4.2
+
+* Fixed ANGLE android memory allocation.
+* Fixed glFramebufferTextureLayer for web and wasm
+* Fixed resize for web and wasm
+
 ## 0.4.1
 
 * Updated ffigen and bindings.

@@ -345,7 +345,7 @@ external void glUniformBlockBinding(JSObject gl, JSAny? program, int uniformBloc
 
 
 @JS()
-external void glFramebufferTextureLayer(JSObject gl, int target,int attachment, int texture,int level,int layer);
+external void glFramebufferTextureLayer(JSObject gl, int target,int attachment, JSAny? texture,int level,int layer);
 @JS()
 external void glClearBufferuiv(JSObject gl, int buffer, int drawbuffer, int value);
 @JS()

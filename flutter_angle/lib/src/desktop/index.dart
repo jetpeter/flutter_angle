@@ -1,2 +1,3 @@
 export 'wrapper.dart';
-export './angle_bindings.dart';
+export './egl_bindings.dart';
+export './gles_bindings.dart';

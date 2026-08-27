@@ -512,9 +512,9 @@ class RenderingContext{
     return glCheckFramebufferStatus(_gl, target);
   }
 
-  void framebufferTextureLayer(int target,int attachment,int texture,int level,int layer){
+  void framebufferTextureLayer(int target,int attachment,WebGLTexture? texture,int level,int layer){
     startCheck("framebufferTextureLayer");
-    glFramebufferTextureLayer(_gl, target, attachment, texture, level, layer);
+    glFramebufferTextureLayer(_gl, target, attachment, texture?.id, level, layer);
     checkError('framebufferTextureLayer');
   }
 

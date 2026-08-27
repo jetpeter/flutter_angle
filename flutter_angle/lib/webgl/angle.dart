@@ -136,8 +136,9 @@ class FlutterAngle{
     }
   }
   Future<void> resize(FlutterAngleTexture texture, AngleOptions options) async{
-    texture.surfaceId?.width = (options.width * options.dpr).toInt();
-    texture.surfaceId?.height = (options.height * options.dpr).toInt();
+    final element = texture.surfaceId as html.HTMLCanvasElement;
+    element.width = (options.width * options.dpr).toInt();
+    element.height = (options.height * options.dpr).toInt();
   }
   Future<void> deleteTexture(FlutterAngleTexture texture) async {}
   void activateTexture(FlutterAngleTexture texture) {}
